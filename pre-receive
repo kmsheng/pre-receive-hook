@@ -1,0 +1,39 @@
+#!/bin/bash
+
+while read old_ref new_ref ref_name; do
+
+    tmp_dir=`mktemp -d`
+
+    # See if the git repo has a .jshintrc file
+    jshintrc=`git ls-tree --full-tree --name-only -r HEAD -- | egrep .jshintrc`
+
+    jshint="jshint"
+    if [ -n "$jshintrc" ]
+    then
+        # Create a path to a temp .jshintrc file
+        jshintrc_file="$tmp_dir/`basename \"$jshintrc\"`"
+
+        # Write the repo file to the temp location
+        git cat-file blob HEAD:$jshintrc > $jshintrc_file
+
+        # Update the jshint command to use the configuration file
+        jshint="$jshint --config=$jshintrc_file"
+    fi
+
+    for changed_file in $(git diff --name-only $old_ref $new_ref --diff-filter=ACM); do
+
+        git cat-file blob ${new_ref}:${changed_file} > "$tmp_dir/${changed_file}"
+        ${jshint} ${tmp_dir}/${changed_file} >&2
+
+        exit_code=$((${exit_code} + $?))
+
+        if [[ $exit_code -ne 0 ]]
+        then
+            rm -rf ${tmp_dir}
+            exit ${exit_code}
+        fi
+    done
+done
+
+rm -rf ${tmp_dir}
+exit 0
