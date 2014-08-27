@@ -20,7 +20,7 @@ while read old_ref new_ref ref_name; do
         jshint="$jshint --config=$jshintrc_file"
     fi
 
-    for changed_file in $(git diff --name-only $old_ref $new_ref --diff-filter=ACM); do
+    for changed_file in `git diff --name-only $old_ref $new_ref --diff-filter=ACMR | egrep *.js`; do
 
         git cat-file blob ${new_ref}:${changed_file} > "$tmp_dir/${changed_file}"
         ${jshint} ${tmp_dir}/${changed_file} >&2
